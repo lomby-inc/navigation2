@@ -198,7 +198,14 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
 
   // Create the Behavior Tree from the XML input
   try {
+    RCLCPP_INFO(logger_, "\n=== Loading BT XML file: %s ===", filename.c_str());
     tree_ = bt_->createTreeFromText(xml_string, blackboard_);
+    RCLCPP_INFO(logger_, "BT successfully created from XML.");
+
+    // Print tree structure (recursively)
+    RCLCPP_INFO(logger_, "Printing Behavior Tree structure:");
+    // BT::printTreeRecursively(tree_.rootNode());
+
     for (auto & blackboard : tree_.blackboard_stack) {
       blackboard->set<rclcpp::Node::SharedPtr>("node", client_node_);
       blackboard->set<std::chrono::milliseconds>("server_timeout", default_server_timeout_);
@@ -208,7 +215,16 @@ bool BtActionServer<ActionT>::loadBehaviorTree(const std::string & bt_xml_filena
         wait_for_service_timeout_);
     }
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(logger_, "Exception when loading BT: %s", e.what());
+    // RCLCPP_ERROR(logger_, "Exception when loading BT: %s", e.what());
+    RCLCPP_ERROR(
+      logger_,
+      "\n=== Exception while creating BT Tree ===\n"
+      "XML file: %s\n"
+      "Error message: %s\n"
+      "Probable cause: Port type mismatch or malformed XML.",
+      filename.c_str(),
+      e.what()
+    );
     return false;
   }
 
