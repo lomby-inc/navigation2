@@ -64,7 +64,8 @@ void TrajectoryVisualizer::on_deactivate() {
 }
 
 void TrajectoryVisualizer::add(const xt::xtensor<float, 2> &trajectory,
-                               const std::string &marker_namespace) {
+                               const std::string &marker_namespace)
+{
   auto &size = trajectory.shape()[0];
   if (!size) {
     return;
@@ -73,15 +74,35 @@ void TrajectoryVisualizer::add(const xt::xtensor<float, 2> &trajectory,
   auto add_marker = [&](auto i) {
     float component = static_cast<float>(i) / static_cast<float>(size);
 
-    auto pose = utils::createPose(trajectory(i, 0), trajectory(i, 1), 0.06);
+    double yaw = 0.0;
+    if (i < size - 1) {
+      double dx = trajectory(i + 1, 0) - trajectory(i, 0);
+      double dy = trajectory(i + 1, 1) - trajectory(i, 1);
+      yaw = std::atan2(dy, dx);
+    } else if (size > 1) {
+      double dx = trajectory(i, 0) - trajectory(i - 1, 0);
+      double dy = trajectory(i, 1) - trajectory(i - 1, 1);
+      yaw = std::atan2(dy, dx);
+    }
+
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, yaw);
+
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = trajectory(i, 0);
+    pose.position.y = trajectory(i, 1);
+    pose.position.z = 0.06;
+    pose.orientation = tf2::toMsg(q);
+
     auto node = node_.lock();
     auto logger = node->get_logger();
-    //    RCLCPP_INFO(logger, "In marker add");
+
     geometry_msgs::msg::PoseStamped pose_stamped;
     pose_stamped.pose = pose;
     pose_stamped.header.stamp = plan_time_;
-    pose_stamped.header.frame_id = "base_link";
+    pose_stamped.header.frame_id = frame_id_;
     traj_plan_->poses.push_back(pose_stamped);
+
     auto scale = i != size - 1 ? utils::createScale(0.03, 0.03, 0.07)
                                : utils::createScale(0.07, 0.07, 0.09);
     auto color = utils::createColor(0, component, component, 1);
@@ -128,6 +149,7 @@ void TrajectoryVisualizer::reset() {
   auto node = node_.lock();
   plan_time_ = node->get_clock()->now();
   traj_plan_->header.stamp = plan_time_;
+  traj_plan_->header.frame_id = frame_id_; 
 }
 
 void TrajectoryVisualizer::visualize(const nav_msgs::msg::Path &plan) {

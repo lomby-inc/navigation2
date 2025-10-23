@@ -113,6 +113,11 @@ protected:
 
   // Odometry smoother object
   std::shared_ptr<nav2_util::OdomSmoother> odom_smoother_;
+
+  // --- Optional prune behavior (drop leading goals that drifted behind robot) ---
+  bool prune_behind_goals_{true};
+  double prune_fwd_thresh_m_{0.25};  // consider "behind" if fwd < -0.25 m
+  double prune_dist_thresh_m_{0.75}; // and total distance > 0.75 m (avoid jitter at start)
 };
 
 }  // namespace nav2_bt_navigator
